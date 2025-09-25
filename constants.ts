@@ -1,5 +1,5 @@
 
-export const MAX_CONCURRENT_JOBS = 4;
+
 export const MAX_JOBS_PER_MINUTE = 4;
 
 export const VIDEO_MODELS = [

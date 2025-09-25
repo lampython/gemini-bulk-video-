@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Job, JobStatus } from './types';
 import { generateVideoFromApi } from './services/geminiService';
-import { MAX_CONCURRENT_JOBS, MAX_JOBS_PER_MINUTE } from './constants';
+import { MAX_JOBS_PER_MINUTE } from './constants';
 import JobForm from './components/JobForm';
 import JobList from './components/JobList';
 import { DownloadIcon } from './components/icons';
@@ -10,6 +10,7 @@ const App: React.FC = () => {
     const [jobs, setJobs] = useState<Job[]>([]);
     const [jobStartTimestamps, setJobStartTimestamps] = useState<number[]>([]);
     const [isProcessingQueue, setIsProcessingQueue] = useState<boolean>(false);
+    const [maxConcurrentJobs, setMaxConcurrentJobs] = useState<number>(4);
 
     const addJob = (jobDetails: Omit<Job, 'id' | 'status'>) => {
         const newJob: Job = {
@@ -81,7 +82,7 @@ const App: React.FC = () => {
             const recentTimestamps = jobStartTimestamps.filter(ts => ts > oneMinuteAgo);
             const processingCount = jobs.filter(j => j.status === JobStatus.Processing).length;
             
-            const availableSlots = MAX_CONCURRENT_JOBS - processingCount;
+            const availableSlots = maxConcurrentJobs - processingCount;
             const availableRateLimit = MAX_JOBS_PER_MINUTE - recentTimestamps.length;
             
             const slotsToFill = Math.min(availableSlots, availableRateLimit);
@@ -111,7 +112,7 @@ const App: React.FC = () => {
 
         return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [jobs, isProcessingQueue, jobStartTimestamps]);
+    }, [jobs, isProcessingQueue, jobStartTimestamps, maxConcurrentJobs]);
 
 
     const successfulJobsCount = jobs.filter(j => j.status === JobStatus.Success).length;
@@ -131,9 +132,25 @@ const App: React.FC = () => {
                 <JobForm onAddJob={addJob} isDisabled={isProcessingQueue} />
                 
                 <div className="bg-slate-800 rounded-lg shadow-lg p-6">
-                    <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4 flex-wrap">
                         <h2 className="text-2xl font-semibold text-white">Processing Queue</h2>
-                        <div className="flex gap-4 items-center">
+                        <div className="flex gap-4 items-center flex-wrap justify-end">
+                            <div className="flex items-center">
+                                <label htmlFor="concurrency" className="text-sm font-medium text-gray-300 mr-2 whitespace-nowrap">Concurrent Jobs:</label>
+                                <input 
+                                    type="number" 
+                                    id="concurrency" 
+                                    value={maxConcurrentJobs} 
+                                    onChange={e => {
+                                        const value = parseInt(e.target.value, 10);
+                                        setMaxConcurrentJobs(Math.max(1, isNaN(value) ? 1 : value));
+                                    }}
+                                    min="1" 
+                                    max="10"
+                                    className="w-20 bg-slate-900 border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-white sm:text-sm disabled:opacity-50"
+                                    disabled={isProcessingQueue}
+                                />
+                            </div>
                              <span className="text-sm text-gray-400">{jobs.length} total jobs</span>
                              <button
                                 onClick={handleDownloadAll}

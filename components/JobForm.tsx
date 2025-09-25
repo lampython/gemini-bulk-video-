@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Job, InputType } from '../types';
+import { Job, InputType, ScenePrompt } from '../types';
 import { VIDEO_MODELS, ASPECT_RATIOS } from '../constants';
 import { PlusIcon, SparklesIcon, TrashIcon } from './icons';
 import { generateScenePrompts } from '../services/geminiService';
@@ -26,7 +26,7 @@ const JobForm: React.FC<JobFormProps> = ({ onAddJob, isDisabled }) => {
     const [topicPrompt, setTopicPrompt] = useState('');
     const [sceneCount, setSceneCount] = useState<number | string>(5);
     const [characters, setCharacters] = useState<(File | null)[]>(Array(4).fill(null));
-    const [generatedPrompts, setGeneratedPrompts] = useState<string[]>([]);
+    const [generatedPrompts, setGeneratedPrompts] = useState<ScenePrompt[]>([]);
     const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
     
     const isImageInput = inputType === InputType.ImageToVideo || inputType === InputType.FrameToVideo;
@@ -85,7 +85,7 @@ const JobForm: React.FC<JobFormProps> = ({ onAddJob, isDisabled }) => {
     
     const handleUpdateGeneratedPrompt = (index: number, newText: string) => {
         const updatedPrompts = [...generatedPrompts];
-        updatedPrompts[index] = newText;
+        updatedPrompts[index] = { ...updatedPrompts[index], prompt: newText };
         setGeneratedPrompts(updatedPrompts);
     };
 
@@ -97,7 +97,7 @@ const JobForm: React.FC<JobFormProps> = ({ onAddJob, isDisabled }) => {
         const characterImage = characters[0];
         generatedPrompts.forEach(p => {
             onAddJob({
-                prompt: p,
+                prompt: p.prompt,
                 inputType: characterImage ? InputType.ImageToVideo : InputType.TextToVideo,
                 model,
                 aspectRatio,
@@ -234,11 +234,14 @@ const JobForm: React.FC<JobFormProps> = ({ onAddJob, isDisabled }) => {
                     {generatedPrompts.length > 0 && (
                         <div className="space-y-4 pt-4 border-t border-slate-700">
                              <h3 className="text-lg font-medium text-white">Review Generated Scenes</h3>
-                             <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                             <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
                                 {generatedPrompts.map((p, index) => (
-                                    <div key={index} className="flex items-center gap-2">
-                                        <span className="text-sm font-semibold text-gray-400">{index+1}.</span>
-                                        <input type="text" value={p} onChange={e => handleUpdateGeneratedPrompt(index, e.target.value)} className="block w-full bg-slate-700 border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-white sm:text-sm" disabled={isDisabled}/>
+                                    <div key={index} className="flex flex-col">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-semibold text-gray-400">{index+1}.</span>
+                                            <input type="text" value={p.prompt} onChange={e => handleUpdateGeneratedPrompt(index, e.target.value)} className="block w-full bg-slate-700 border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-white sm:text-sm" disabled={isDisabled}/>
+                                        </div>
+                                        <p className="pl-6 pt-1 text-xs text-gray-400 italic">{p.translation}</p>
                                     </div>
                                 ))}
                              </div>

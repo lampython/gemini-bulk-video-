@@ -11,6 +11,11 @@ export enum InputType {
     FrameToVideo = 'Frame-to-Video',
 }
 
+export type ScenePrompt = {
+    prompt: string;
+    translation: string;
+};
+
 export type Job = {
     id: number;
     prompt: string;

@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { Job, InputType } from '../types';
+import { Job, InputType, ScenePrompt } from '../types';
 
 if (!process.env.API_KEY) {
     console.warn("API_KEY environment variable not set. Using a mock service.");
@@ -38,18 +38,21 @@ const mockGenerateVideo = (): Promise<string> => {
     });
 };
 
-const mockGenerateScenePrompts = (topic: string, sceneCount: number): Promise<string[]> => {
+const mockGenerateScenePrompts = (topic: string, sceneCount: number): Promise<ScenePrompt[]> => {
     console.log("Using mock prompt generation service.");
     return new Promise((resolve) => {
         setTimeout(() => {
-            const prompts = Array.from({ length: sceneCount }, (_, i) => `Mock prompt for "${topic}", scene ${i + 1}.`);
+            const prompts = Array.from({ length: sceneCount }, (_, i) => ({
+                prompt: `Mock prompt for "${topic}", scene ${i + 1}.`,
+                translation: `(Bản dịch mẫu) Lời nhắc cho "${topic}", cảnh ${i + 1}.`
+            }));
             resolve(prompts);
         }, 1500);
     });
 };
 
 
-export const generateScenePrompts = async (topic: string, sceneCount: number): Promise<string[]> => {
+export const generateScenePrompts = async (topic: string, sceneCount: number): Promise<ScenePrompt[]> => {
     if (!ai) {
         return mockGenerateScenePrompts(topic, sceneCount);
     }
@@ -58,13 +61,23 @@ export const generateScenePrompts = async (topic: string, sceneCount: number): P
             model: "gemini-2.5-flash",
             contents: `Create a compelling story with exactly ${sceneCount} scenes about "${topic}".`,
             config: {
-                systemInstruction: "You are a creative scriptwriter. Generate a list of distinct scene prompts for a video based on a topic. The prompts should be concise, descriptive, and suitable for a text-to-video AI model. Respond ONLY with a valid JSON array of strings, where each string is a single scene's prompt.",
+                systemInstruction: "You are a creative scriptwriter and a helpful translator. Generate a list of distinct scene prompts for a video based on a topic. For each prompt, provide a Vietnamese translation. Respond ONLY with a valid JSON array of objects, where each object contains a 'prompt' (in English) and a 'translation' (in Vietnamese).",
                 responseMimeType: "application/json",
                 responseSchema: {
                     type: Type.ARRAY,
                     items: {
-                        type: Type.STRING,
-                        description: 'A single, concise prompt for one video scene.'
+                      type: Type.OBJECT,
+                      properties: {
+                        prompt: {
+                          type: Type.STRING,
+                          description: 'A single, concise prompt for one video scene, in English.',
+                        },
+                        translation: {
+                          type: Type.STRING,
+                          description: 'The Vietnamese translation of the prompt.',
+                        },
+                      },
+                      required: ["prompt", "translation"],
                     },
                 },
             },
@@ -73,7 +86,7 @@ export const generateScenePrompts = async (topic: string, sceneCount: number): P
         const jsonText = response.text.trim();
         const prompts = JSON.parse(jsonText);
 
-        if (!Array.isArray(prompts) || prompts.some(p => typeof p !== 'string')) {
+        if (!Array.isArray(prompts) || prompts.some(p => typeof p.prompt !== 'string' || typeof p.translation !== 'string')) {
             throw new Error("API returned an invalid prompt array structure.");
         }
         
