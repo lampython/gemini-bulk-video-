@@ -1,0 +1,5 @@
+{
+  "name": "Video AI - hàng loạt",
+  "description": "An application to submit and manage a batch of video generation jobs using Google's Gemini AI. Users can customize prompts, models, aspect ratios, and input types for each job and the system will process them in a managed queue.",
+  "requestFramePermissions": []
+}
